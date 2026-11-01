@@ -66,9 +66,9 @@ Variables opcionales: `OPENAI_MODEL` (`gpt-4o`), `OPENAI_TIMEOUT` (120), `OPENAI
 
 ```json
 {
-  "sections_changed": ["Cláusula 2", "Cláusula 6", "Cláusula 9"],
+  "sections_changed": ["Cláusula 2. Canon", "Cláusula 6. Depósito de garantía", "Cláusula 9. Seguro"],
   "topics_touched": ["Pagos", "Depósito de garantía", "Seguro"],
-  "summary_of_the_change": "MODIFICACIÓN: Cláusula 2. Canon cambia de USD 1.500 mensuales a USD 1.650 mensuales.\nELIMINACIÓN: Cláusula 6. Depósito de garantía de USD 3.000.\nADICIÓN: Cláusula 9. Seguro contra incendio por USD 50.000."
+  "summary_of_the_change": "MODIFICACIÓN: Cláusula 2. Canon cambia de USD 1.500 mensuales a USD 1.650 mensuales.\nELIMINACIÓN: Cláusula 6. Depósito de garantía, que establecía un depósito de USD 3.000 reembolsable, es eliminada.\nADICIÓN: Cláusula 9. Seguro introduce la obligación de mantener un seguro contra incendio por USD 50.000."
 }
 ```
 
@@ -94,6 +94,7 @@ Un error queda marcado como `ERROR` en su span, y la traza se envía aunque el p
 - **El tipo de cambio va dentro del resumen.** La consigna pide distinguir adiciones, eliminaciones y modificaciones, pero el esquema solo admite tres campos. Por eso el resumen usa las etiquetas `ADICIÓN:`, `ELIMINACIÓN:` y `MODIFICACIÓN:`.
 - **Si algo falla, no hay JSON.** Un JSON con listas vacías se confundiría con "no hubo cambios", y eso en un proceso legal es peor que un error visible.
 - **Una cláusula no mencionada no está eliminada.** Muchas adendas solo enumeran lo que cambia; el prompt del auditor distingue ese caso del de una adenda que reformula todo el contrato.
+- **Lo que no es un documento legal se rechaza.** Hay dos controles, en la lectura y en el Agente 1, porque comparar un recibo con un contrato produciría cambios falsos.
 - **Lo ilegible no se adivina.** El modelo marca `[ILEGIBLE]`, el programa avisa y el auditor no puede presentar eso como un cambio seguro.
 - **Los documentos son datos.** Los prompts prohíben obedecer instrucciones escritas dentro de un contrato.
 - **Reintento con el error de validación.** Si la salida no cumple el esquema, el modelo recibe el error para corregirlo.
@@ -114,16 +115,25 @@ Langfuse no aparece en las carpetas del curso; su uso parte de un proyecto anter
 
 Corridas reales del 1 de noviembre de 2026 con GPT-4o (`gpt-4o-2024-08-06`, según Langfuse), una por par, con los contratos de [`data/test_contracts/`](data/test_contracts/README.md). Las salidas están en [`outputs/`](outputs/).
 
+La tabla muestra la última corrida, hecha con los prompts finales:
+
 | Par | Tipo de adenda | Cambios esperados | Detectados | Falsos | Trampa | Latencia | Costo según Langfuse |
 |---|---|---|---|---|---|---|---|
-| 1 | Reformula todo, escaneo limpio | 4 | 4 | 0 | — | 13,0 s | USD 0,0225 |
-| 2 | Solo enumera, con ruido de escaneo | 3 | 3 | 0 | Cláusula 7 no eliminada: correcto | 10,3 s | USD 0,0188 |
+| 1 | Reformula todo, escaneo limpio | 4 | 4 | 0 | — | 11,5 s | USD 0,0220 |
+| 2 | Solo enumera, con ruido de escaneo | 3 | 3 | 0 | Cláusula 7 no eliminada: correcto | 11,9 s | USD 0,0196 |
 
-No hubo reintentos en estas corridas. La comparación con `esperado.json` fue manual.
+No hubo reintentos en estas corridas. La comparación con `esperado.json` fue manual. El par 1 se corrió 4 veces y el par 2, 3 veces durante el desarrollo, y en todas se detectaron los mismos cambios. El texto sí varió aunque la temperatura es 0: en el par 2, `sections_changed` trajo `Cláusula 2` en unas corridas y `Cláusula 2. Canon` en otra. Un sistema que consuma este JSON no debería comparar esos identificadores como texto exacto.
 
-**Problema encontrado en la primera corrida real:** el análisis salió bien, pero la URL de la traza no se imprimió y Langfuse mostró `Context error: No active span`. El programa pedía la URL con la traza ya cerrada, y el doble de prueba no imitaba ese comportamiento. Se corrigieron la prueba y el código, y las cifras de la tabla son de la corrida posterior.
+Con imágenes que no son contratos (un recibo ficticio, como original y luego como adenda), las dos corridas finales terminaron con salida 1 y sin JSON.
 
-**Límites de esta medición:** son solo 2 pares ficticios, cortos, de una página y con una corrida cada uno. Sirven para comprobar que el flujo funciona, no para estimar su precisión en documentos reales. Tampoco miden qué tan bien responde con escaneos muy degradados o con letra manuscrita.
+**Problemas encontrados en las corridas reales:**
+
+- **URL de la traza:** en la primera corrida no se imprimió, y Langfuse mostró `Context error: No active span`. El programa la pedía con la traza ya cerrada, y el doble de prueba no imitaba ese comportamiento. Se corrigieron la prueba y el código.
+- **Recibo aceptado como contrato:** con la regla de rechazo al final del prompt de visión, GPT-4o transcribió el recibo. El programa terminó con salida 0 y reportó 9 adiciones falsas. Ahora esa comprobación va primero en el prompt de visión. El Agente 1 tiene además un segundo control, que todavía no se ha activado en una corrida real porque la lectura ya rechazó ambos recibos.
+
+**Fallo encontrado en la revisión del código:** el bucle de reintento no funcionaba con el modelo real, porque `ChatOpenAI` lanza el error de validación dentro de `invoke()`. Una salida inválida terminaba en un traceback, y las pruebas no lo veían porque usaban un doble. Ahora está cubierto con un `ChatOpenAI` real sobre una red simulada. Un fallo de validación de GPT-4o no se ha observado en corridas reales, así que este camino solo está probado de esa forma.
+
+**Límites de esta medición:** son solo 2 pares ficticios, cortos y de una página, y un solo tipo de imagen ajena. Sirven para comprobar que el flujo funciona, no para estimar su precisión en documentos reales. Tampoco miden qué tan bien responde con escaneos muy degradados o con letra manuscrita.
 
 ## Pruebas
 
