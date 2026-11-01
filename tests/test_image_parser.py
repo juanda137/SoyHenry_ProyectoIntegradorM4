@@ -187,3 +187,7 @@ def test_prompt_rechaza_lo_que_no_es_un_contrato():
 def test_negativas_escritas_como_texto_son_error(imagen, texto):
     with pytest.raises(ErrorDeEtapa):
         parse_contract_image(imagen, CONFIG, cliente=ClienteOpenAIFalso([respuesta_vision(texto)]))
+
+
+def test_prompt_verifica_el_tipo_de_documento_antes_de_transcribir():
+    assert PROMPT_VISION.index("SIN_TEXTO_LEGIBLE") < PROMPT_VISION.index("Transcribe el texto completo")

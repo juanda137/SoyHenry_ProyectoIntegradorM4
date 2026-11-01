@@ -57,3 +57,13 @@ def test_pasa_callbacks_a_la_llamada():
     llm = llm_falso([AIMessage(content="M")])
     ContextualizationAgent(llm).analizar("a", "b", callbacks=[callback])
     assert callback in llm.configs[0]["callbacks"].handlers
+
+
+def test_prompt_pide_rechazar_lo_que_no_es_un_documento_legal():
+    assert "DOCUMENTO_NO_LEGAL" in SYSTEM_PROMPT and "recibo" in SYSTEM_PROMPT
+
+
+@pytest.mark.parametrize("mapa", ["DOCUMENTO_NO_LEGAL", "DOCUMENTO_NO_LEGAL.", "Resultado: DOCUMENTO_NO_LEGAL"])
+def test_documento_que_no_es_legal_detiene_el_analisis(mapa):
+    with pytest.raises(ErrorDeEtapa, match="no es un contrato"):
+        ContextualizationAgent(llm_falso([AIMessage(content=mapa)])).analizar("Recibo", "Adenda")

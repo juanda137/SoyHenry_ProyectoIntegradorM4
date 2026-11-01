@@ -221,3 +221,11 @@ def test_fallo_de_flush_no_pierde_el_json(rutas, capsys, con_dobles, monkeypatch
     assert main(list(rutas)) == 0
     salida = capsys.readouterr()
     assert json.loads(salida.out)["topics_touched"] == ["Pagos"] and "sin red" in salida.err
+
+
+def test_documento_no_legal_sale_1_sin_json_ni_extraccion(rutas, capsys, con_dobles, monkeypatch):
+    llm = LLMDePrueba(mapa="DOCUMENTO_NO_LEGAL")
+    monkeypatch.setattr(modulo_main, "crear_llm", lambda config: llm)
+    assert main(list(rutas)) == 1
+    salida = capsys.readouterr()
+    assert salida.out == "" and "no es un contrato" in salida.err and llm.mensajes_agente_2 == []

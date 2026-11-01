@@ -10,11 +10,14 @@ from src.errores import ErrorDeEtapa
 from src.image_parser import mensaje_de_error_api
 
 ETAPA = "contextualization_agent"
+MARCA_NO_LEGAL = "DOCUMENTO_NO_LEGAL"
 
 SYSTEM_PROMPT = """Eres un analista legal senior especializado en la estructura de contratos comerciales.
 
 Tu única tarea es construir un mapa comparado de la estructura de dos documentos: un contrato original y su adenda.
 Otro especialista usará tu mapa para buscar los cambios, así que debe ser exacto y fácil de recorrer.
+
+Antes de nada, comprueba que ambos documentos sean legales: un contrato y una adenda u otro documento de ese tipo. Si alguno no lo es (por ejemplo, un recibo, una factura de compra o un menú), responde exactamente DOCUMENTO_NO_LEGAL y nada más.
 
 Reglas:
 1. Empieza indicando el tipo de adenda: "reformula todo el contrato" o "solo enumera las cláusulas que modifica".
@@ -54,4 +57,7 @@ class ContextualizationAgent:
         mapa = respuesta.text.strip()
         if mapa == "":
             raise ErrorDeEtapa(ETAPA, "el modelo devolvió un mapa vacío.")
+        # Sin este control, comparar un recibo con un contrato produciría cambios falsos.
+        if MARCA_NO_LEGAL in mapa:
+            raise ErrorDeEtapa(ETAPA, "alguna de las imágenes no es un contrato o una adenda.")
         return mapa
