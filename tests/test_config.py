@@ -44,3 +44,12 @@ def test_numero_invalido_es_error_de_configuracion(monkeypatch, variable, valor)
 def test_error_de_etapa_guarda_la_etapa():
     error = ErrorDeEtapa("extraction_agent", "falló")
     assert error.etapa == "extraction_agent" and "extraction_agent" in str(error) and "falló" in str(error)
+
+
+def test_env_con_codificacion_rara_es_error_de_configuracion(monkeypatch):
+    def falla(*args, **kwargs):
+        raise UnicodeDecodeError("utf-8", bytes([255]), 0, 1, "byte inválido")
+
+    monkeypatch.setattr(config, "load_dotenv", falla)
+    with pytest.raises(ErrorDeConfiguracion, match="UTF-8"):
+        cargar_configuracion()

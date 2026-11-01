@@ -3,6 +3,7 @@ import io
 import json
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -12,7 +13,7 @@ from PIL import Image
 from src import main as modulo_main
 from src.errores import ErrorDeConfiguracion
 from src.main import configurar_salida_utf8, ejecutar_pipeline, main
-from tests.ayudantes import ClienteOpenAIFalso, LangfuseFalso, respuesta_vision
+from tests.ayudantes import ClienteOpenAIFalso, LangfuseFalso, chat_openai_simulado, respuesta_vision
 
 CONFIG = {"openai_api_key": "sk-prueba", "modelo": "gpt-4o", "timeout_s": 5.0, "max_intentos": 3, "max_tokens": 100,
           "langfuse_public_key": "", "langfuse_secret_key": "", "langfuse_host": ""}
@@ -193,3 +194,30 @@ def test_ambas_formas_de_ejecutar(comando):
     resultado = subprocess.run([sys.executable, *comando, "no_existe_a.png", "no_existe_b.png"],
                                capture_output=True, text=True, encoding="utf-8")
     assert resultado.returncode == 2 and "no_existe_a.png" in resultado.stderr and resultado.stdout == ""
+
+
+def test_validacion_agotada_con_modelo_real_sale_1_sin_json(rutas, capsys, con_dobles, monkeypatch):
+    invalida = json.dumps({**VALIDA, "summary_of_the_change": "  "})
+    llm, pedidos = chat_openai_simulado(["MAPA", invalida, invalida, invalida])
+    monkeypatch.setattr(modulo_main, "crear_llm", lambda config: llm)
+    assert main(list(rutas)) == 1
+    salida = capsys.readouterr()
+    assert salida.out == "" and "3 intentos" in salida.err and len(pedidos) == 4
+
+
+def test_excepcion_inesperada_sale_1_sin_traceback(rutas, capsys, con_dobles, monkeypatch):
+    rota = SimpleNamespace(choices=None, usage=None, model="gpt-4o")
+    monkeypatch.setattr(modulo_main, "crear_cliente_openai", lambda config: ClienteOpenAIFalso([rota]))
+    assert main(list(rutas)) == 1
+    salida = capsys.readouterr()
+    assert salida.out == "" and "Error" in salida.err
+
+
+def test_fallo_de_flush_no_pierde_el_json(rutas, capsys, con_dobles, monkeypatch):
+    def falla():
+        raise RuntimeError("sin red")
+
+    monkeypatch.setattr(con_dobles, "flush", falla)
+    assert main(list(rutas)) == 0
+    salida = capsys.readouterr()
+    assert json.loads(salida.out)["topics_touched"] == ["Pagos"] and "sin red" in salida.err

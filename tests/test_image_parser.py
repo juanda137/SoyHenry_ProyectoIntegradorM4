@@ -158,3 +158,32 @@ def test_respuestas_inutiles_son_error(imagen, respuesta):
     with pytest.raises(ErrorDeEtapa):
         parse_contract_image(imagen, CONFIG, cliente=cliente)
     assert len(cliente.llamadas) == 1
+
+
+def test_imagen_descomunal_es_error_de_entrada(imagen, monkeypatch):
+    monkeypatch.setattr(image_parser.Image, "MAX_IMAGE_PIXELS", 1)
+    with pytest.raises(ErrorDeEntrada):
+        validar_imagen(imagen)
+
+
+def test_acepta_jpeg_de_celular_con_varias_imagenes(tmp_path):
+    ruta = tmp_path / "foto.jpg"
+    primera = Image.new("RGB", (20, 30), "white")
+    primera.save(ruta, format="MPO", save_all=True, append_images=[Image.new("RGB", (20, 30), "gray")])
+    datos = validar_imagen(str(ruta))
+    assert (datos["formato"], datos["mime"]) == ("JPEG", "image/jpeg")
+
+
+def test_prompt_rechaza_lo_que_no_es_un_contrato():
+    assert "no es un contrato" in PROMPT_VISION
+
+
+@pytest.mark.parametrize("texto", [
+    "SIN_TEXTO_LEGIBLE.",
+    "Respuesta: SIN_TEXTO_LEGIBLE",
+    "Lo siento, no puedo ayudar con esa imagen.",
+    "I'm sorry, I can't help with that.",
+])
+def test_negativas_escritas_como_texto_son_error(imagen, texto):
+    with pytest.raises(ErrorDeEtapa):
+        parse_contract_image(imagen, CONFIG, cliente=ClienteOpenAIFalso([respuesta_vision(texto)]))

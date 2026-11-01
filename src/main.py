@@ -95,6 +95,16 @@ def _son_el_mismo_contenido(ruta_a, ruta_b):
         return archivo_a.read() == archivo_b.read()
 
 
+def _enviar_traza(cliente_langfuse):
+    """Envía la traza. Un problema aquí no debe perder un análisis ya terminado."""
+    if cliente_langfuse is None:
+        return
+    try:
+        cliente_langfuse.flush()
+    except Exception as error:
+        print("[aviso] No se pudo enviar la traza a Langfuse: " + str(error), file=sys.stderr)
+
+
 def _crear_parser():
     parser = argparse.ArgumentParser(description="Compara un contrato con su adenda a partir de imágenes.")
     parser.add_argument("original", help="imagen JPEG o PNG del contrato original")
@@ -126,10 +136,13 @@ def main(argv=None):
         # Sin JSON: una salida vacía se confundiría con "no hubo cambios".
         print("Error en " + str(error), file=sys.stderr)
         return 1
+    except Exception as error:
+        # Último recurso: lo no previsto también termina con un mensaje, sin JSON.
+        print("Error inesperado (" + type(error).__name__ + "): " + str(error), file=sys.stderr)
+        return 1
     finally:
-        # Envía la traza aunque algo haya fallado.
-        if cliente_langfuse is not None:
-            cliente_langfuse.flush()
+        # La traza se envía aunque algo haya fallado.
+        _enviar_traza(cliente_langfuse)
     print(salida.model_dump_json(indent=2))
     return 0
 

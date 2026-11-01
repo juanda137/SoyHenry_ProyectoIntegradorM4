@@ -85,6 +85,11 @@ class ExtractionAgent:
                 resultado = self.modelo.invoke(mensajes, config={"callbacks": callbacks or []})
             except openai.OpenAIError as error:
                 raise ErrorDeEtapa(ETAPA, mensaje_de_error_api(error)) from error
+            except ValidationError as error:
+                # ChatOpenAI valida el esquema dentro de invoke(), así que aquí llega el
+                # error de un resumen vacío o de un JSON roto. No corta el programa: se
+                # registra y se le devuelve al modelo como cualquier otro fallo de validación.
+                resultado = {"parsed": None, "parsing_error": describir_error_validacion(error)}
             with etapa(self.cliente_langfuse, "validation", input={"intento": intento}) as span:
                 salida, problema = _validar(resultado)
                 if salida is not None:

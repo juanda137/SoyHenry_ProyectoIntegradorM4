@@ -1,10 +1,12 @@
 """Dobles de prueba: reemplazan a OpenAI y a Langfuse para que nada salga a la red."""
+import json
 from contextlib import contextmanager
 from types import SimpleNamespace
 
 import httpx
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda
+from langchain_openai import ChatOpenAI
 
 
 class ClienteOpenAIFalso:
@@ -127,3 +129,21 @@ def error_api(clase, status, codigo=None):
     pedido = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
     respuesta = httpx.Response(status, request=pedido)
     return clase("error simulado", response=respuesta, body={"code": codigo})
+
+
+def chat_openai_simulado(contenidos):
+    """Un ChatOpenAI real con la red simulada: ejercita el análisis real del SDK y de LangChain."""
+    pendientes = list(contenidos)
+    pedidos = []
+
+    def responder(pedido):
+        pedidos.append(json.loads(pedido.content))
+        mensaje = {"role": "assistant", "content": pendientes.pop(0), "refusal": None}
+        return httpx.Response(200, json={
+            "id": "c", "object": "chat.completion", "created": 1, "model": "gpt-4o",
+            "choices": [{"index": 0, "finish_reason": "stop", "message": mensaje}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        })
+
+    cliente = httpx.Client(transport=httpx.MockTransport(responder))
+    return ChatOpenAI(model="gpt-4o", api_key="sk-prueba", http_client=cliente, max_retries=0), pedidos

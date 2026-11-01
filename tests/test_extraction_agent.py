@@ -1,4 +1,6 @@
 """Pruebas del Agente 2 con un modelo falso."""
+import json
+
 import httpx
 import openai
 import pytest
@@ -6,7 +8,7 @@ import pytest
 from src.agents.extraction_agent import SYSTEM_PROMPT, ExtractionAgent
 from src.errores import ErrorDeEtapa
 from src.models import ContractChangeOutput
-from tests.ayudantes import LangfuseFalso, fallo, llm_estructurado_falso, ok
+from tests.ayudantes import LangfuseFalso, chat_openai_simulado, fallo, llm_estructurado_falso, ok
 
 VALIDA = {"sections_changed": ["Cláusula 3"], "topics_touched": ["Pagos"],
           "summary_of_the_change": "MODIFICACIÓN: plazo de 30 a 45 días."}
@@ -79,3 +81,30 @@ def test_prompt_define_rol_y_reglas():
 
 def test_prompt_cubre_adenda_parcial():
     assert "no mencionada" in SYSTEM_PROMPT and "no está eliminada" in SYSTEM_PROMPT
+
+
+def _json(**cambios):
+    return json.dumps({**VALIDA, **cambios}, ensure_ascii=False)
+
+
+@pytest.mark.parametrize("invalida", [_json(summary_of_the_change="   "), "{json roto", _json(extra=1)])
+def test_modelo_real_con_salida_invalida_se_reintenta(invalida):
+    llm, pedidos = chat_openai_simulado([invalida, _json()])
+    assert ExtractionAgent(llm).extraer("M", "O", "A").topics_touched == ["Pagos"]
+    assert len(pedidos) == 2
+    assert "no pasó la validación" in json.dumps(pedidos[1], ensure_ascii=False)
+
+
+def test_modelo_real_agota_los_intentos_con_error_de_etapa():
+    llm, pedidos = chat_openai_simulado([_json(summary_of_the_change=" ")] * 3)
+    with pytest.raises(ErrorDeEtapa, match="3 intentos"):
+        ExtractionAgent(llm).extraer("M", "O", "A")
+    assert len(pedidos) == 3
+
+
+def test_modelo_real_registra_el_fallo_en_el_span_validation():
+    falso = LangfuseFalso()
+    llm, _ = chat_openai_simulado([_json(summary_of_the_change=" "), _json()])
+    ExtractionAgent(llm, cliente_langfuse=falso).extraer("M", "O", "A")
+    assert falso.raices[0].campos["level"] == "ERROR"
+    assert [span.nombre for span in falso.raices] == ["validation", "validation"]

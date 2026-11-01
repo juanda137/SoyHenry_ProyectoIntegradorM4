@@ -24,7 +24,10 @@ def _leer_numero(variable, por_defecto, convertir):
 
 def cargar_configuracion():
     """Devuelve un dict con la configuración. Lanza ErrorDeConfiguracion si algo falta."""
-    load_dotenv()
+    try:
+        load_dotenv()
+    except UnicodeError:
+        raise ErrorDeConfiguracion("El archivo .env no está en UTF-8: vuelve a guardarlo con esa codificación.") from None
     clave = os.getenv("OPENAI_API_KEY", "").strip()
     if clave == "" or clave == CLAVE_DE_EJEMPLO:
         raise ErrorDeConfiguracion("Falta OPENAI_API_KEY: copia .env.example como .env y agrega tu clave.")
