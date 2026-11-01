@@ -1,0 +1,70 @@
+{
+  "par_1": {
+    "tipo_de_adenda": "reformula todo el contrato",
+    "sections_changed": [
+      "Cláusula 2",
+      "Cláusula 3",
+      "Cláusula 6",
+      "Cláusula 9"
+    ],
+    "topics_touched": [
+      "Precio",
+      "Pagos",
+      "Penalidades",
+      "Protección de datos"
+    ],
+    "cambios": [
+      {
+        "tipo": "MODIFICACIÓN",
+        "seccion": "Cláusula 2",
+        "detalle": "El precio pasa de USD 2.000 a USD 2.400 mensuales."
+      },
+      {
+        "tipo": "MODIFICACIÓN",
+        "seccion": "Cláusula 3",
+        "detalle": "El plazo de pago pasa de 30 a 45 días calendario."
+      },
+      {
+        "tipo": "ELIMINACIÓN",
+        "seccion": "Cláusula 6",
+        "detalle": "Se quita la penalidad por demora de USD 50 diarios."
+      },
+      {
+        "tipo": "ADICIÓN",
+        "seccion": "Cláusula 9",
+        "detalle": "Se agrega el tratamiento de datos personales."
+      }
+    ]
+  },
+  "par_2": {
+    "tipo_de_adenda": "solo enumera las cláusulas que modifica",
+    "sections_changed": [
+      "Cláusula 2",
+      "Cláusula 6",
+      "Cláusula 9"
+    ],
+    "topics_touched": [
+      "Canon",
+      "Garantías",
+      "Seguros"
+    ],
+    "clausula_no_mencionada": "Cláusula 7",
+    "cambios": [
+      {
+        "tipo": "MODIFICACIÓN",
+        "seccion": "Cláusula 2",
+        "detalle": "El canon pasa de USD 1.500 a USD 1.650 mensuales."
+      },
+      {
+        "tipo": "ELIMINACIÓN",
+        "seccion": "Cláusula 6",
+        "detalle": "Se quita el depósito de garantía de USD 3.000."
+      },
+      {
+        "tipo": "ADICIÓN",
+        "seccion": "Cláusula 9",
+        "detalle": "Se agrega un seguro contra incendio por USD 50.000."
+      }
+    ]
+  }
+}
