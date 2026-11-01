@@ -86,7 +86,9 @@ def test_tokens_para_langfuse():
 
 
 def test_url_de_traza():
-    assert url_de_traza(LangfuseFalso()) == "https://langfuse.falso/traza"
+    falso = LangfuseFalso()
+    with etapa(falso, "x"):
+        assert url_de_traza(falso) == "https://langfuse.falso/traza"
     assert url_de_traza(None) is None
 
 

@@ -70,7 +70,8 @@ class LangfuseFalso:
         self.flushes += 1
 
     def get_trace_url(self):
-        return "https://langfuse.falso/traza"
+        # Igual que el SDK real: sin un span activo no hay traza de la cual dar la URL.
+        return "https://langfuse.falso/traza" if self.pila else None
 
 
 def llm_falso(guion):

@@ -69,6 +69,11 @@ def ejecutar_pipeline(ruta_original, ruta_adenda, config, cliente_langfuse=None,
     llm = llm or crear_llm(config)
     entrada = {"contrato_original": ruta_original, "adenda": ruta_adenda}
     with etapa(cliente_langfuse, "contract-analysis", input=entrada) as raiz:
+        # La URL se pide aquí porque el SDK solo la conoce con la traza activa.
+        # Además, así queda impresa aunque una etapa falle después.
+        url = url_de_traza(cliente_langfuse)
+        if url:
+            print("Traza en Langfuse: " + url, file=sys.stderr)
         texto_original = _leer_documento(cliente_langfuse, "parse_original_contract", ruta_original,
                                          config, cliente_openai)
         texto_adenda = _leer_documento(cliente_langfuse, "parse_amendment_contract", ruta_adenda,
@@ -126,9 +131,6 @@ def main(argv=None):
         if cliente_langfuse is not None:
             cliente_langfuse.flush()
     print(salida.model_dump_json(indent=2))
-    url = url_de_traza(cliente_langfuse)
-    if url:
-        print("Traza en Langfuse: " + url, file=sys.stderr)
     return 0
 
 

@@ -154,6 +154,12 @@ def test_url_de_traza_va_a_stderr(rutas, capsys, con_dobles):
     assert "https://langfuse.falso/traza" in salida.err and "https://" not in salida.out
 
 
+def test_url_de_traza_tambien_sale_si_falla(rutas, capsys, con_dobles, monkeypatch):
+    monkeypatch.setattr(modulo_main, "crear_cliente_openai", lambda config: ClienteOpenAIFalso([respuesta_vision("")]))
+    assert main(list(rutas)) == 1
+    assert "https://langfuse.falso/traza" in capsys.readouterr().err
+
+
 def test_ilegible_genera_aviso(rutas, capsys, con_dobles, monkeypatch):
     vision = ClienteOpenAIFalso([respuesta_vision("a [ILEGIBLE] b [ILEGIBLE]"), respuesta_vision("c")])
     monkeypatch.setattr(modulo_main, "crear_cliente_openai", lambda config: vision)
