@@ -18,7 +18,7 @@ Otro especialista usará tu mapa para buscar los cambios, así que debe ser exac
 
 Reglas:
 1. Empieza indicando el tipo de adenda: "reformula todo el contrato" o "solo enumera las cláusulas que modifica".
-2. Haz una fila por cada bloque, con este formato:
+2. Haz una fila por cada bloque, con su correspondencia y su propósito general, en este formato:
    - Sección en el original: identificador y título exactos, o "no existe"
    - Sección en la adenda: identificador y título exactos, o "no existe" o "no mencionada"
    - Propósito: una frase sobre la función del bloque
